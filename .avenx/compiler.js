@@ -75,23 +75,31 @@ class AvenxCompiler {
     }
 
     /**
-     * Scans the bridges directory and generates registration code for each bridge found.
+     * Scans the global directory and generates registration code for each bridge found.
      * @returns {Object} An object containing the generated bridge registration strings.
      * @private
      */
     processBridges() {
-        const bridgeDir = path.join(this.srcDir, 'bridges');
+        const globalDir = path.join(this.srcDir, 'global');
         let registrations = "";
-        if (fs.existsSync(bridgeDir)) {
-            fs.readdirSync(bridgeDir).forEach(file => {
-                if (file.endsWith('.js')) {
-                    const name = path.basename(file, '.js');
-                    console.log(`[Bridge] ${name}`);
-                    const content = fs.readFileSync(path.join(bridgeDir, file), 'utf-8');
+        if (fs.existsSync(globalDir)) {
+            fs.readdirSync(globalDir).forEach(file => {
+                if (file.endsWith('.bridge.js')) {
+                    const name = path.basename(file, '.bridge.js');
+                    // Capitalize bridge name for registration if needed, or keep as is?
+                    // Previous was CounterBridge.js -> CounterBridge.
+                    // Now counter.bridge.js -> counter.
+                    // Let's capitalize first letter for consistency with component naming?
+                    // Actually, the example shows CounterBridge.count in Display.axt.
+                    // So maybe CounterBridge?
+                    const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1) + "Bridge";
+                    
+                    console.log(`[Bridge] ${capitalizedName}`);
+                    const content = fs.readFileSync(path.join(globalDir, file), 'utf-8');
                     const match = content.match(/export\s+default\s+([\s\S]*)/);
                     if (match) {
                         const objStr = match[1].trim().replace(/;$/, '');
-                        registrations += `app.registerBridge('${name}', ${objStr});\n`;
+                        registrations += `app.registerBridge('${capitalizedName}', ${objStr});\n`;
                     }
                 }
             });
@@ -100,33 +108,40 @@ class AvenxCompiler {
     }
 
     /**
-     * Scans the components directory and compiles every .axt file into a JavaScript class.
+     * Scans the components directory recursively and compiles every .component.js file into a JavaScript class.
      * @returns {string} The combined JavaScript code for all components.
      * @private
      */
     processComponents() {
         let componentsJs = "";
         const compDir = path.join(this.srcDir, 'components');
-        if (fs.existsSync(compDir)) {
-            fs.readdirSync(compDir).forEach(file => {
-                if (file.endsWith('.axt')) {
+        
+        const scan = (dir) => {
+            if (!fs.existsSync(dir)) return;
+            fs.readdirSync(dir).forEach(file => {
+                const fullPath = path.join(dir, file);
+                if (fs.statSync(fullPath).isDirectory()) {
+                    scan(fullPath);
+                } else if (file.endsWith('.component.js')) {
                     console.log(`[Compiling] ${file}`);
-                    componentsJs += this.componentParser.parse(path.join(compDir, file));
+                    componentsJs += this.componentParser.parse(fullPath);
                 }
             });
-        }
+        };
+
+        scan(compDir);
         return componentsJs;
     }
 
     /**
-     * Processes the main application entry point (.avx file).
+     * Processes the main application entry point (main.app.js file).
      * Integrates bridge registrations and wraps the code in an IIFE.
      * @param {string} bridgeRegistrations - The bridge registration code to inject.
      * @returns {string} The processed main entry point code.
      * @private
      */
     processMain(bridgeRegistrations) {
-        const mainFile = path.join(this.srcDir, 'main.avx');
+        const mainFile = path.join(this.srcDir, 'main.app.js');
         if (fs.existsSync(mainFile)) {
             let main = fs.readFileSync(mainFile, 'utf-8').replace(/import.*?;/g, ''); 
             if (bridgeRegistrations) {

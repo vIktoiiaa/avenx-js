@@ -17,14 +17,15 @@ class ComponentParser {
     }
 
     /**
-     * Parses an .axt file and its corresponding .axd file into a JavaScript class string.
-     * @param {string} filePath - The absolute path to the .axt file.
+     * Parses a .component.js file and its corresponding .component.css file into a JavaScript class string.
+     * @param {string} filePath - The absolute path to the .component.js file.
      * @returns {string} The generated JavaScript class for the component.
      */
     parse(filePath) {
         const content = fs.readFileSync(filePath, 'utf-8');
-        const name = path.basename(filePath, '.axt');
-        const desPath = filePath.replace('.axt', '.axd');
+        const fileName = path.basename(filePath, '.component.js');
+        const name = fileName.charAt(0).toUpperCase() + fileName.slice(1);
+        const desPath = filePath.replace('.component.js', '.component.css');
         let desBlocks = {};
 
         if (fs.existsSync(desPath)) {
