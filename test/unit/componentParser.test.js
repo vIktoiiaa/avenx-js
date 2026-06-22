@@ -38,6 +38,35 @@ try {
     
     console.log('  ✅ List Rendering Compiler tests passed!');
 
+    console.log('🧪 Testing Nested List Rendering Compiler...');
+    const contentNested = `
+    <div>
+        <@for category in categories>
+            <h2>{{ category.name }}</h2>
+            <ul>
+                <@for item in category.items key="item.id">
+                    <li>{{ item.name }}</li>
+                </@for>
+            </ul>
+        </@for>
+    </div>
+    `;
+
+    const templateNested = cp.extractTemplate(contentNested, {}, 'TestComp');
+    
+    // Outer loop checks
+    assert.ok(templateNested.includes('template data-ax-for="categories"'));
+    assert.ok(templateNested.includes('data-ax-as="category"'));
+    assert.ok(templateNested.includes('<h2>{% category.name %}</h2>'));
+
+    // Inner loop checks
+    assert.ok(templateNested.includes('template data-ax-for="category.items"'));
+    assert.ok(templateNested.includes('data-ax-as="item"'));
+    assert.ok(templateNested.includes('data-ax-key="item.id"'));
+    assert.ok(templateNested.includes('<li>{% item.name %}</li>'));
+
+    console.log('  ✅ Nested List Rendering Compiler tests passed!');
+
     console.log('🧪 Testing Style block matching with/without spaces...');
     const cssNoSpaces = `
     <@global>
